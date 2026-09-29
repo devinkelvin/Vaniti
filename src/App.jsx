@@ -3,10 +3,11 @@ import Map from './components/Map';
 import Sidebar from './components/Sidebar';
 import ControlPanel from './components/ControlPanel';
 import EmojiFlyer from './components/EmojiFlyer';
-import { Sparkles, Sun, Moon } from 'lucide-react';
+import { Sparkles, Sun, Moon, ArrowRight, Smartphone, MapPin } from 'lucide-react';
 import { VanitiProvider, useVaniti } from './components/vaniti/VanitiContext';
 import VanitiLauncher from './components/vaniti/VanitiLauncher';
 import VanitiModal from './components/vaniti/VanitiModal';
+import VanitiBrandApp from './components/vaniti/VanitiBrandApp';
 
 const INITIAL_FRIENDS = [
   {
@@ -86,6 +87,13 @@ function MainApp() {
   // Shake / Bump states
   const [isShaking, setIsShaking] = useState(false);
   const [bumpState, setBumpState] = useState({ active: false, friend: null });
+
+  // Vaniti Brand Mobile View Mode (default 'vaniti' for brand mobile experience)
+  const [activeAppMode, setActiveAppMode] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('view') === 'map') return 'map';
+    return 'vaniti';
+  });
 
   // Web Audio Context for Synth Sounds
   const audioCtxRef = useRef(null);
@@ -326,6 +334,61 @@ function MainApp() {
     }, 600); // Small delay to let the map fly there
   };
 
+  if (activeAppMode === 'vaniti') {
+    return (
+      <div style={{
+        width: '100vw',
+        height: '100vh',
+        background: '#161616',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        {/* Desktop-only quick toggle to Map */}
+        <div 
+          className="desktop-only-switch"
+          style={{
+            position: 'fixed',
+            top: '16px',
+            right: '16px',
+            zIndex: 9999,
+          }}
+        >
+          <button
+            onClick={() => {
+              playSynthSound('click');
+              setActiveAppMode('map');
+            }}
+            title="Switch to Zengly Radar Map"
+            style={{
+              background: 'rgba(35, 35, 37, 0.9)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              borderRadius: '24px',
+              padding: '8px 16px',
+              color: '#ffffff',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              backdropFilter: 'blur(12px)',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.6)',
+              transition: 'all 0.2s',
+            }}
+          >
+            <MapPin size={15} color="#c27803" />
+            <span>Switch to Map</span>
+          </button>
+        </div>
+
+        <VanitiBrandApp onBackToMap={() => setActiveAppMode('map')} />
+      </div>
+    );
+  }
+
   return (
     <div 
       className={`app-container ${isShaking ? 'shake-screen' : ''}`}
@@ -337,6 +400,38 @@ function MainApp() {
         overflow: 'hidden'
       }}
     >
+      {/* Floating Switch to Vaniti Mobile Experience */}
+      <div style={{
+        position: 'fixed',
+        top: '20px',
+        right: '20px',
+        zIndex: 1000,
+      }}>
+        <button
+          onClick={() => {
+            playSynthSound('click');
+            setActiveAppMode('vaniti');
+          }}
+          style={{
+            background: '#c27803',
+            border: 'none',
+            borderRadius: '24px',
+            padding: '10px 18px',
+            color: '#ffffff',
+            fontSize: '13px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: '0 4px 18px rgba(194, 120, 3, 0.5)',
+            transition: 'all 0.2s',
+          }}
+        >
+          <Smartphone size={16} />
+          <span>Open Vaniti Mobile</span>
+        </button>
+      </div>
       {/* Floating Brand & Quick Theme Bar (Top Left) */}
       <div 
         className="glass"

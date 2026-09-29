@@ -58,15 +58,22 @@
   padding: 0;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   font-family: var(--font-sans);
-  background-color: var(--bg-dark);
+  background-color: #161616;
   color: var(--text-primary);
   overflow: hidden;
-  height: 100vh;
-  width: 100vw;
+  height: 100%;
+  width: 100%;
   user-select: none;
   -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 h1, h2, h3, h4, .font-display {
@@ -506,5 +513,15 @@ h1, h2, h3, h4, .font-display {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
+
+@media (max-width: 768px) {
+  .desktop-only-switch {
+    display: none !important;
+  }
+  .simulated-status-bar {
+    display: none !important;
+  }
+}
+
 
 
