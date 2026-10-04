@@ -153,7 +153,13 @@ export default function VanitiBrandApp({ onBackToMap }) {
     setWalletBalance,
     playVanitiSound,
     soundEnabled,
-    setSoundEnabled
+    setSoundEnabled,
+    sprayNote,
+    syncStatus,
+    setIsOpen,
+    setRole,
+    setSprayerStep,
+    setHostStep,
   } = useVaniti();
 
   // Screen State: 'baller' (Screenshot 4) | 'spraying' (Screenshot 1) | 'complete' (Screenshot 3)
@@ -236,6 +242,12 @@ export default function VanitiBrandApp({ onBackToMap }) {
     const noteVal = currentDenom.value;
     const newSprayed = sprayedAmount + noteVal;
     
+    // Broadcast spray action over WebSocket / SSE / BroadcastChannel to Host Broadcast Screen!
+    sprayNote(noteVal, {
+      name: 'Kelvin Ekuhoho',
+      avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=antigravity'
+    });
+
     // Add flying note particle
     const noteId = Math.random();
     const angle = (Math.random() - 0.5) * 40;
@@ -344,6 +356,31 @@ export default function VanitiBrandApp({ onBackToMap }) {
               <span style={{ fontSize: '19px', fontWeight: 700, letterSpacing: '-0.3px', color: '#ffffff' }}>
                 {activeNav === 'home' ? 'Vaniti' : activeNav === 'history' ? 'Spray History' : activeNav === 'insight' ? 'Analytics' : 'VIP Profile'}
               </span>
+              <div 
+                title={syncStatus?.isConnected ? `Connected to Host Projector (${syncStatus.peers} active)` : 'Connecting to Host Stage...'}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  background: syncStatus?.isConnected ? 'rgba(16, 185, 129, 0.15)' : 'rgba(234, 179, 8, 0.15)',
+                  border: syncStatus?.isConnected ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(234, 179, 8, 0.3)',
+                  borderRadius: '12px',
+                  padding: '2px 8px',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  color: syncStatus?.isConnected ? '#34d399' : '#facc15',
+                  marginLeft: '6px'
+                }}
+              >
+                <span style={{ 
+                  width: '6px', 
+                  height: '6px', 
+                  borderRadius: '50%', 
+                  background: syncStatus?.isConnected ? '#10b981' : '#eab308',
+                  boxShadow: syncStatus?.isConnected ? '0 0 6px #10b981' : 'none' 
+                }} />
+                <span>{syncStatus?.isConnected ? 'SYNCED' : 'LOCAL'}</span>
+              </div>
             </div>
 
             {/* Right Header Action: Balance Pill on Home, VIP Club pill on other tabs */}

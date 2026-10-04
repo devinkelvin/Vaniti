@@ -16,6 +16,11 @@ $JAVAC = "$JAVA_HOME\bin\javac.exe"
 $BaseDir = "c:\Users\Kelvin Ekuhoho\Desktop\Zengly\android-app"
 Set-Location $BaseDir
 
+Write-Host "0. Compiling fresh web distribution assets..."
+Push-Location ".."
+& npm run build
+Pop-Location
+
 Write-Host "1. Creating build folders..."
 New-Item -ItemType Directory -Force -Path "gen", "bin", "bin\classes", "assets" | Out-Null
 
@@ -57,13 +62,17 @@ Write-Host "10. Signing APK with apksigner..."
 Write-Host "11. Verifying APK signature..."
 & $APKSIGNER verify "bin\vaniti.apk"
 
-Write-Host "12. Setting ADB reverse port 5173..."
+Write-Host "12. Setting ADB reverse ports 5174 and 5173..."
+& $ADB reverse tcp:5174 tcp:5174
 & $ADB reverse tcp:5173 tcp:5173
 
-Write-Host "13. Installing Vaniti APK on connected device..."
+Write-Host "13. Checking connected device status..."
+& $ADB devices -l
+
+Write-Host "14. Installing Vaniti APK on connected device..."
 & $ADB install -r "bin\vaniti.apk"
 
-Write-Host "14. Launching Vaniti on phone..."
+Write-Host "15. Launching Vaniti app on phone..."
 & $ADB shell am start -n com.vaniti.app/.MainActivity
 
-Write-Host "SUCCESS! Vaniti mobile app is installed and running on Kelvin's Galaxy S10!"
+Write-Host "SUCCESS! Vaniti mobile app is built, reverse-proxied, installed, and launched on the connected device!"

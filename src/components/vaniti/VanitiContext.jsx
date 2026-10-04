@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import vanitiSync from '../../services/vanitiSync';
 
 const VanitiContext = createContext(null);
 
@@ -308,8 +309,91 @@ export function VanitiProvider({ children }) {
   // Get active event object
   const activeEvent = events.find(e => e.id === selectedEventId) || events[0];
 
+  // Cross-device synchronization status
+  const [syncStatus, setSyncStatus] = useState(() => vanitiSync.getStatus());
+
+  // Subscribe to live cross-device broadcast stream
+  useEffect(() => {
+    const unsubStatus = vanitiSync.onStatusChange(setSyncStatus);
+
+    const unsubscribe = vanitiSync.subscribe((msg) => {
+      if (msg.type === 'SPRAY_EVENT' && msg.spray) {
+        const remoteSpray = msg.spray;
+        // Play celebration audio on receiver
+        playVanitiSound('cash_drop');
+
+        // Add to history and show toast banner
+        setSprayHistory(prev => [remoteSpray, ...prev.slice(0, 49)]);
+        setRecentSprayToast(remoteSpray);
+
+        // Update active event stats & leaderboard in real-time
+        setEvents(prevEvents =>
+          prevEvents.map(evt => {
+            if (evt.id === selectedEventId || evt.isLive) {
+              const newTotal = evt.totalSprayed + remoteSpray.amount;
+              const isBundle = remoteSpray.denomId === 'bundle';
+              const newNotes = evt.totalNotes + (isBundle ? 100 : 1);
+
+              let updatedSprayers = [...evt.topSprayers];
+              const idx = updatedSprayers.findIndex(s => s.name === remoteSpray.sprayerName);
+              if (idx >= 0) {
+                updatedSprayers[idx] = {
+                  ...updatedSprayers[idx],
+                  amount: updatedSprayers[idx].amount + remoteSpray.amount,
+                  noteCount: updatedSprayers[idx].noteCount + (isBundle ? 100 : 1),
+                };
+              } else {
+                updatedSprayers.push({
+                  id: 's-' + Date.now(),
+                  name: remoteSpray.sprayerName,
+                  amount: remoteSpray.amount,
+                  avatar: remoteSpray.sprayerAvatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=' + remoteSpray.sprayerName,
+                  noteCount: isBundle ? 100 : 1,
+                });
+              }
+
+              updatedSprayers.sort((a, b) => b.amount - a.amount);
+              updatedSprayers = updatedSprayers.map((s, i) => ({ ...s, rank: i + 1 }));
+
+              return {
+                ...evt,
+                totalSprayed: newTotal,
+                totalNotes: newNotes,
+                topSprayers: updatedSprayers,
+              };
+            }
+            return evt;
+          })
+        );
+      } else if (msg.type === 'HOST_CONTROL') {
+        const { control, data } = msg;
+        if (control === 'PAUSE') {
+          setEvents(prev => prev.map(e => (e.id === data.eventId ? { ...e, isPaused: data.isPaused } : e)));
+        } else if (control === 'HIDE_TOTALS') {
+          setEvents(prev => prev.map(e => (e.id === data.eventId ? { ...e, hideTotals: data.hideTotals } : e)));
+        } else if (control === 'END_EVENT') {
+          setEvents(prev => prev.map(e => (e.id === data.eventId ? { ...e, isLive: false } : e)));
+        }
+      } else if (msg.type === 'ANNOUNCEMENT') {
+        setRecentSprayToast({
+          id: 'announcement-' + Date.now(),
+          sprayerName: 'HOST BROADCAST',
+          sprayerAvatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=HostStage',
+          amount: 0,
+          customAnnouncement: msg.message,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        });
+      }
+    });
+
+    return () => {
+      unsubStatus();
+      unsubscribe();
+    };
+  }, [selectedEventId]);
+
   // Helper to spray notes (called by SprayerStage on gesture flick)
-  const sprayNote = (customAmount = null) => {
+  const sprayNote = (customAmount = null, customSprayer = null) => {
     if (!activeEvent || activeEvent.isPaused) return false;
 
     const denom = DENOMINATIONS.find(d => d.id === selectedDenomId) || DENOMINATIONS[0];
@@ -332,8 +416,8 @@ export function VanitiProvider({ children }) {
 
     const sprayAction = {
       id: 'spray-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
-      sprayerName: 'Kelvin Ekuhoho',
-      sprayerAvatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=antigravity',
+      sprayerName: customSprayer?.name || 'Kelvin Ekuhoho',
+      sprayerAvatar: customSprayer?.avatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=antigravity',
       amount,
       denomId: denom.id,
       denomLabel: denom.label,
@@ -345,6 +429,9 @@ export function VanitiProvider({ children }) {
     // Broadcast toast to Host
     setRecentSprayToast(sprayAction);
 
+    // Broadcast in real-time over WebSocket / SSE / BroadcastChannel to PC & all screens!
+    vanitiSync.broadcastSpray(sprayAction);
+
     // Update the Event totals and leaderboard in real-time
     setEvents(prevEvents =>
       prevEvents.map(evt => {
@@ -354,7 +441,7 @@ export function VanitiProvider({ children }) {
 
           // Update user's position in leaderboard
           let updatedSprayers = [...evt.topSprayers];
-          const userIdx = updatedSprayers.findIndex(s => s.name === 'Kelvin Ekuhoho');
+          const userIdx = updatedSprayers.findIndex(s => s.name === sprayAction.sprayerName);
           if (userIdx >= 0) {
             updatedSprayers[userIdx] = {
               ...updatedSprayers[userIdx],
@@ -363,10 +450,10 @@ export function VanitiProvider({ children }) {
             };
           } else {
             updatedSprayers.push({
-              id: 's-user',
-              name: 'Kelvin Ekuhoho',
+              id: 's-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+              name: sprayAction.sprayerName,
               amount,
-              avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=antigravity',
+              avatar: sprayAction.sprayerAvatar,
               noteCount: denom.isBundle ? 100 : 1,
             });
           }
@@ -392,21 +479,48 @@ export function VanitiProvider({ children }) {
   // Host Controls
   const toggleEventPause = (eventId) => {
     setEvents(prev =>
-      prev.map(e => (e.id === eventId ? { ...e, isPaused: !e.isPaused } : e))
+      prev.map(e => {
+        if (e.id === eventId) {
+          const updated = !e.isPaused;
+          vanitiSync.broadcastHostControl('PAUSE', { eventId, isPaused: updated });
+          return { ...e, isPaused: updated };
+        }
+        return e;
+      })
     );
   };
 
   const toggleHideTotals = (eventId) => {
     setEvents(prev =>
-      prev.map(e => (e.id === eventId ? { ...e, hideTotals: !e.hideTotals } : e))
+      prev.map(e => {
+        if (e.id === eventId) {
+          const updated = !e.hideTotals;
+          vanitiSync.broadcastHostControl('HIDE_TOTALS', { eventId, hideTotals: updated });
+          return { ...e, hideTotals: updated };
+        }
+        return e;
+      })
     );
   };
 
   const endEvent = (eventId) => {
+    vanitiSync.broadcastHostControl('END_EVENT', { eventId });
     setEvents(prev =>
       prev.map(e => (e.id === eventId ? { ...e, isLive: false } : e))
     );
     setHostStep('analytics');
+  };
+
+  const broadcastAnnouncement = (message) => {
+    vanitiSync.broadcastAnnouncement(message);
+    setRecentSprayToast({
+      id: 'announcement-' + Date.now(),
+      sprayerName: 'HOST BROADCAST',
+      sprayerAvatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=HostStage',
+      amount: 0,
+      customAnnouncement: message,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
   };
 
   const createEvent = (newEventData) => {
@@ -513,6 +627,8 @@ export function VanitiProvider({ children }) {
         soundEnabled,
         setSoundEnabled,
         playVanitiSound,
+        syncStatus,
+        broadcastAnnouncement,
       }}
     >
       {children}

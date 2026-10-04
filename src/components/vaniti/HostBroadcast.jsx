@@ -39,7 +39,8 @@ export default function HostBroadcast() {
     setSoundEnabled,
     sprayNote,
     isHostOffline,
-    setIsHostOffline
+    setIsHostOffline,
+    syncStatus,
   } = useVaniti();
 
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -233,6 +234,59 @@ export default function HostBroadcast() {
 
         {/* Right: Quick Stage Actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* Real-time Broadcast Status Indicator */}
+          <div
+            title={`Real-Time Stage Sync: ${syncStatus?.isConnected ? 'Active' : 'Connecting'}`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: syncStatus?.isConnected ? 'rgba(16, 185, 129, 0.15)' : 'rgba(234, 179, 8, 0.15)',
+              border: syncStatus?.isConnected ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(234, 179, 8, 0.3)',
+              borderRadius: '20px',
+              padding: '6px 12px',
+              fontSize: '11px',
+              fontWeight: 700,
+              color: syncStatus?.isConnected ? '#34d399' : '#facc15',
+            }}
+          >
+            <span style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: syncStatus?.isConnected ? '#10b981' : '#eab308',
+              boxShadow: syncStatus?.isConnected ? '0 0 8px #10b981' : 'none',
+            }} />
+            <span>{syncStatus?.isConnected ? `LIVE SYNC (${syncStatus.peers} PEERS)` : 'SEARCHING...'}</span>
+          </div>
+
+          {/* Simulate Spray Trigger for instant testing */}
+          <button
+            onClick={() => {
+              sprayNote(5000, {
+                name: 'Chief Obi Okoye',
+                avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=ChiefObi'
+              });
+            }}
+            title="Simulate incoming guest spray (₦5,000)"
+            style={{
+              background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(217, 119, 6, 0.2) 100%)',
+              border: '1px solid rgba(245, 158, 11, 0.5)',
+              borderRadius: '12px',
+              padding: '8px 12px',
+              fontSize: '12px',
+              fontWeight: 700,
+              color: '#fbbf24',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: 'pointer',
+            }}
+          >
+            <Zap size={14} color="#fbbf24" />
+            Simulate Spray
+          </button>
+
           <button
             onClick={() => setShowQrModal(true)}
             style={{
@@ -1007,22 +1061,55 @@ export default function HostBroadcast() {
               </span>
             </div>
 
-            <button
-              onClick={() => setShowQrModal(false)}
-              style={{
-                width: '100%',
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: 'none',
-                color: '#fff',
-                borderRadius: '12px',
-                padding: '12px',
-                fontSize: '14px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Close
-            </button>
+            {/* Direct Connect URLs for Connected Phone & Guests */}
+            <div style={{ background: 'rgba(255, 255, 255, 0.05)', borderRadius: '16px', padding: '12px 14px', marginBottom: '16px', textAlign: 'left', fontSize: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>📱 Connected Android Phone:</span>
+                <span style={{ color: 'var(--neon-green)', fontWeight: 700, fontFamily: 'monospace' }}>http://localhost:5174</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>📶 Wi-Fi Guest URL:</span>
+                <span style={{ color: '#fbbf24', fontWeight: 700, fontFamily: 'monospace' }}>http://192.168.1.197:5174</span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => {
+                  window.open('/?view=vaniti', '_blank', 'width=420,height=820');
+                }}
+                style={{
+                  flex: 1,
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  border: 'none',
+                  color: '#fff',
+                  borderRadius: '12px',
+                  padding: '12px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)'
+                }}
+              >
+                Launch Guest Phone
+              </button>
+
+              <button
+                onClick={() => setShowQrModal(false)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: 'none',
+                  color: '#fff',
+                  borderRadius: '12px',
+                  padding: '12px 20px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -78,7 +78,7 @@ function MainApp() {
   });
 
   const [friends, setFriends] = useState(INITIAL_FRIENDS);
-  const { theme, toggleTheme } = useVaniti();
+  const { theme, toggleTheme, setRole, setHostStep, setIsOpen } = useVaniti();
   const [selectedEntity, setSelectedEntity] = useState(null);
   const [flyingEmojis, setFlyingEmojis] = useState([]);
   const [isSpeedToggled, setIsSpeedToggled] = useState(false);
@@ -91,9 +91,20 @@ function MainApp() {
   // Vaniti Brand Mobile View Mode (default 'vaniti' for brand mobile experience)
   const [activeAppMode, setActiveAppMode] = useState(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('view') === 'map') return 'map';
+    if (params.get('view') === 'map' || params.get('view') === 'host' || params.get('role') === 'host') return 'map';
     return 'vaniti';
   });
+
+  // Direct Host Stage Launch via URL (?view=host or ?role=host)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('view') === 'host' || params.get('role') === 'host' || params.get('broadcast') === 'true') {
+      setActiveAppMode('map');
+      setRole('host');
+      setHostStep('broadcast');
+      setIsOpen(true);
+    }
+  }, [setRole, setHostStep, setIsOpen]);
 
   // Web Audio Context for Synth Sounds
   const audioCtxRef = useRef(null);
